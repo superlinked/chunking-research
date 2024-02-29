@@ -39,7 +39,9 @@ class QUAC(Dataset):
 
         if config.preprocess.concat_train_validation:
             logger.info('Concatenating train and validation sets...')
-            df = pd.concat([df_train, df_valid], axis=0)
+            df = pd.concat(
+                [df_train, df_valid], axis=0
+            ).reset_index(drop=True)
         else:
             df = df_train.copy()
 
@@ -102,7 +104,9 @@ class SQUAD(Dataset):
 
         if config.preprocess.concat_train_validation:
             logger.info('Concatenating train and validation sets...')
-            df = pd.concat([df_train, df_valid], axis=0)
+            df = pd.concat(
+                [df_train, df_valid], axis=0
+            ).reset_index(drop=True)
         else:
             df = df_train.copy()
 
@@ -115,6 +119,57 @@ class SQUAD(Dataset):
             inplace=True
         )
         df = df.loc[:, SQUAD.columns]
+
+        df = df.groupby('context').agg(
+            {'questions': list, 'answers': list}
+        ).reset_index()
+
+        n_contexts = config.preprocess.n_contexts
+
+        if n_contexts:
+            df = df.iloc[:n_contexts]
+
+        return df
+
+
+class HotPotQA(Dataset):
+    # https://aclanthology.org/D18-1259.pdf
+    # https://huggingface.co/datasets/hotpot_qa?row=16
+    @staticmethod
+    def load_dataset(config: DictConfig) -> pd.DataFrame:
+
+        logger = get_logger()
+        dataset_name = 'hotpot_qa'
+        path_cache_dir = Path().resolve().joinpath(
+            config.datasets, dataset_name
+        )
+        logger.info(f'Loading dataset: {dataset_name}')
+        dataset = load_dataset(
+            dataset_name, 'fullwiki', cache_dir=str(path_cache_dir)
+        )
+        df_train = pd.DataFrame(dataset['train'])
+        df_valid = pd.DataFrame(dataset['validation'])
+
+        if config.preprocess.concat_train_validation:
+            logger.info('Concatenating train and validation sets...')
+            df = pd.concat(
+                [df_train, df_valid], axis=0
+            ).reset_index(drop=True)
+        else:
+            df = df_train.copy()
+
+        df = df.loc[
+            df['context'].apply(lambda x: bool(x['sentences']))
+        ].reset_index(drop=True)
+
+        df['context'] = df.context.apply(
+            lambda x: ["".join(sub_list) for sub_list in x['sentences']][0]
+        )
+        df.rename(
+            columns={'question': 'questions', 'answer': 'answers'},
+            inplace=True
+        )
+        df = df.loc[:, HotPotQA.columns]
 
         df = df.groupby('context').agg(
             {'questions': list, 'answers': list}
@@ -146,4 +201,7 @@ if __name__ == '__main__':
     print(df.head())
 
     df = SQUAD.load_dataset(config)
+    print(df.head())
+
+    df = HotPotQA.load_dataset(config)
     print(df.head())
