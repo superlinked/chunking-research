@@ -4,8 +4,16 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
-from retrieval import run_retrieval_evaluation
-from utils import get_logger, log_experiment_mlflow, recursive_config_update
+from retrieval import (
+    run_retrieval_evaluation,
+    run_colbert_retrieval_evaluation
+)
+from utils import (
+    get_logger,
+    log_retrieval_experiment_mlflow,
+    log_colbert_experiment_mlflow,
+    recursive_config_update
+)
 
 
 class ExperimentRunner(ABC):
@@ -23,13 +31,21 @@ class Retrieval(ExperimentRunner):
         top_ks = cfg.retrieval.evaluation.top_ks
 
         for idx, top_k in enumerate(top_ks):
-            log_experiment_mlflow(cfg, top_k, results[idx], ['naive_rag'])
+            log_retrieval_experiment_mlflow(
+                cfg, top_k, results[idx], ['colbert_retrieval']
+            )
 
 
-class NaiveRAG(ExperimentRunner):
+class RetrievalColBERT(ExperimentRunner):
     @staticmethod
     def run_experiment(cfg: DictConfig):
-        pass
+        results = run_colbert_retrieval_evaluation(cfg)
+        top_ks = cfg.retrieval.evaluation.top_ks
+
+        for idx, top_k in enumerate(top_ks):
+            log_colbert_experiment_mlflow(
+                cfg, top_k, results[idx], ['retrieval']
+            )
 
 
 @hydra.main(config_path='configs', config_name='config', version_base='1.2')
