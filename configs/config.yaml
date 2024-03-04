@@ -16,10 +16,11 @@ mlflow:
 datasets: ./datasets/
 embeddings: ./artifacts/embeddings/
 experiments: ./artifacts/experiments/
+colbert_index: ./artifacts/colbert_index
 
 preprocess:
-  dataset: SQUAD #QUAC
-  n_contexts: #1000 # for testing
+  dataset: SQUAD #QUAC / HotPotQA
+  n_contexts: # 1000 # for testing
   concat_train_validation: True
 
 retrieval:
@@ -52,10 +53,10 @@ retrieval:
 
   model:
     model_name: BAAI/bge-small-en-v1.5
-    embed_batch_size: 256
+    embed_batch_size: 32
     normalize: true
 
-  reranking: true
+  reranking: false
   reranker:
     model_name: cross-encoder/ms-marco-TinyBERT-L-2-v2
     predict:
@@ -71,9 +72,17 @@ retrieval:
       - 7
       - 10
 
-naive_rag:
-
-
+colbert_retrieval:
+  model_name: colbert-ir/colbertv2.0
+  max_document_length: 128
+  question_batch_size: 5000
+  evaluation:
+    top_ks:
+      - 1
+      - 3
+      - 5
+      - 7
+      - 10
 
 # change default log directory for hydra
 hydra:
