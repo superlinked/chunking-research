@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 from typing import Dict, List, Union
 
 from omegaconf import DictConfig
@@ -16,6 +17,7 @@ from llama_index.core.node_parser import (
     TokenTextSplitter
 )
 import numpy as np
+from ragatouille import RAGPretrainedModel
 from sentence_transformers import CrossEncoder
 import torch
 from transformers import AutoTokenizer
@@ -253,6 +255,65 @@ def compute_similarity_scores_for_reranking(
     return scores
 
 
+def run_colbert_retrieval_evaluation(
+    config: DictConfig
+) -> List[Dict[str, float]]:
+
+    ccr = config.colbert_retrieval
+    logger = get_logger()
+    index_root = Path().resolve().joinpath(config.colbert_index)
+    question_batch_size = ccr.question_batch_size
+    top_ks = ccr.evaluation.top_ks
+
+    df = factory(config).load_dataset(config)
+
+    contexts, question_batches = df.context.tolist(), df.questions.tolist()
+    # question - doc_id, for retrieval labels
+    labels = np.array(
+        [idx for idx, qb in enumerate(question_batches) for q in qb]
+    )
+    questions = [q for qb in question_batches for q in qb]
+
+    rag = RAGPretrainedModel.from_pretrained(
+        ccr.model_name,
+        index_root=str(index_root),
+        verbose=1
+    )
+    start = time.time()
+    rag.index(
+        collection=contexts,
+        document_ids=[str(i) for i in range(len(contexts))],
+        max_document_length=ccr.max_document_length,
+        split_documents=True
+    )
+    logger.info(
+        f'Indexing took {(time.time() - start) / 60:.2f} minutes.\n'
+        f'Starting retrieval search...'
+    )
+    retrieved_ids = []
+    max_top_k = max(top_ks)
+
+    for idx in tqdm(list(range(0, len(questions), question_batch_size))):
+
+        question_batch = questions[idx: idx + question_batch_size]
+        retrievals = rag.search(query=question_batch, k=max_top_k)
+        retrieved_ids_batch = np.array([
+            int(x['document_id']) for sub_list in retrievals for x in sub_list
+        ]).reshape((-1, max_top_k))
+        retrieved_ids.append(retrieved_ids_batch)
+
+    retrieved_ids = np.concatenate(retrieved_ids, axis=0)
+    results = []
+    logger.info('Starting evaluation...')
+
+    for tk in tqdm(top_ks):
+        top_k_retrieved_ids = retrieved_ids[:, :tk].copy()
+        res_top_k = evaluate_retrieved_results(top_k_retrieved_ids, labels, tk)
+        results.append(res_top_k)
+
+    return results
+
+
 def evaluate_retrieved_results(
     retrieved_ids: np.ndarray,
     labels: np.ndarray,
@@ -261,13 +322,20 @@ def evaluate_retrieved_results(
 
     logger = get_logger()
     logger.info('Computing metrics...')
-    matches = (
-            np.expand_dims(labels, axis=1) == retrieved_ids
+    targets = (
+        np.expand_dims(labels, axis=1) == retrieved_ids
     )
-    matches = torch.tensor(np.array(matches), dtype=torch.float16)
-    targets = torch.ones(matches.shape)
-    indexes = torch.arange(matches.shape[0]).view(
-        -1, 1) * torch.ones(1, matches.shape[1]).long()
+    targets = torch.tensor(np.array(targets), dtype=torch.float16)
+    targets = torch.clamp(targets, min=0, max=1)
+
+    preds = torch.tensor(
+        np.geomspace(1, 0.1, top_k), dtype=torch.float32
+    )
+    preds /= torch.sum(preds)
+    preds = preds.repeat((targets.shape[0], 1))
+
+    indexes = torch.arange(targets.shape[0]).view(
+        -1, 1) * torch.ones(1, targets.shape[1]).long()
 
     metrics = [
         torchmetrics.retrieval.RetrievalMRR(),
@@ -280,7 +348,7 @@ def evaluate_retrieved_results(
     results = {}
 
     for metr in metrics:
-        score = round(metr(targets, matches, indexes).item(), 4)
+        score = round(metr(preds, targets, indexes).item(), 4)
         metr_name = metr.__class__.__name__.replace('Retrieval', '')
         results[metr_name] = score
         logger.info(f'Top-{top_k}: {metr_name}: {score}')
@@ -297,3 +365,8 @@ if __name__ == '__main__':
 
     for top_k, res in zip(config.retrieval.evaluation.top_ks, results):
         print(f'{top_k}: {res}')
+
+    # results = run_colbert_retrieval_evaluation(config)
+    #
+    # for top_k, res in zip(config.retrieval.evaluation.top_ks, results):
+    #     print(f'{top_k}: {res}')
