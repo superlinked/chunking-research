@@ -66,7 +66,7 @@ def get_path_of_query_embeddings(config: DictConfig) -> Path:
     return path_embeddings
 
 
-def log_experiment_mlflow(
+def log_retrieval_experiment_mlflow(
     config: DictConfig,
     top_k: int,
     metrics: Dict[str, float],
@@ -105,6 +105,42 @@ def log_experiment_mlflow(
     tags = {
         **cfg_mlflow.tags,
         'chunker': cr.chunker.name,
+        'dataset': config.preprocess.dataset
+    }
+    with mlflow.start_run(
+        run_name=cfg_mlflow.run_name,
+        description=cfg_mlflow.description
+    ) as run:
+
+        mlflow.set_tags(tags)
+        mlflow.log_dict(OmegaConf.to_container(config), 'config.yaml')
+        mlflow.log_metrics(metrics)
+        mlflow.log_params(params_to_log)
+
+
+def log_colbert_experiment_mlflow(
+    config: DictConfig,
+    top_k: int,
+    metrics: Dict[str, float],
+    keys_to_remove: List[str]
+) -> None:
+
+    logger = get_logger()
+    logger.info('Logging results with MLFlow...')
+    config = select_relevant_config(config, keys_to_remove)
+    ccr = config.colbert_retrieval
+
+    cfg_mlflow = config.mlflow
+    mlflow.set_tracking_uri(Path().resolve().joinpath(config.experiments))
+    mlflow.set_experiment(cfg_mlflow.experiment_name)
+
+    params_to_log = {
+        'model_name': ccr.model_name,
+        'max_document_length': ccr.max_document_length,
+        'top_k': top_k
+    }
+    tags = {
+        **cfg_mlflow.tags,
         'dataset': config.preprocess.dataset
     }
     with mlflow.start_run(
