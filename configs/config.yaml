@@ -24,7 +24,7 @@ preprocess:
   concat_train_validation: True
 
 retrieval:
-  # comment all the below chunker until the model if the pipeline is used
+  # comment everything below the chunker until the model if the pipeline is used
   chunker:
 #    name: SentenceSplitter
 #    params:
