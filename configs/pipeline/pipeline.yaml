@@ -2084,6 +2084,126 @@
 #        - 7
 #        - 10
 #
+#- mlflow:
+#    experiment_name: Retrieval
+#    run_name: sentence-transformers/all-distilroberta-v1
+#    description: Retrieval with SentenceSplitter chunking and Reranking
+#    tags:
+#      experiment: Retrieval
+#      dataset: HotPotQA
+#      model: sentence-transformers/all-distilroberta-v1
+#
+#  preprocess:
+#    dataset: HotPotQA
+#    n_contexts:
+#    concat_train_validation: true
+#
+#  retrieval:
+#    chunker:
+#      name: SentenceSplitter
+#      params:
+#        chunk_size: 128
+#        chunk_overlap: 16
+#
+#    model:
+#      model_name: sentence-transformers/all-distilroberta-v1
+#      embed_batch_size: 8
+#      normalize: true
+#
+#    reranking: true
+#    reranker:
+#      model_name: cross-encoder/ms-marco-TinyBERT-L-2-v2
+#      predict:
+#        batch_size: 32
+#        show_progress_bar: true
+#
+#    evaluation:
+#      top_ks:
+#        - 3
+#        - 5
+#        - 7
+#        - 10
+#
+#- mlflow:
+#    experiment_name: Retrieval
+#    run_name: WhereIsAI/UAE-Large-V1
+#    description: Retrieval with SentenceSplitter chunking and Reranking
+#    tags:
+#      experiment: Retrieval
+#      dataset: HotPotQA
+#      model: WhereIsAI/UAE-Large-V1
+#
+#  preprocess:
+#    dataset: HotPotQA
+#    n_contexts:
+#    concat_train_validation: true
+#
+#  retrieval:
+#    chunker:
+#      name: SentenceSplitter
+#      params:
+#        chunk_size: 128
+#        chunk_overlap: 16
+#
+#    model:
+#      model_name: WhereIsAI/UAE-Large-V1
+#      embed_batch_size: 8
+#      normalize: true
+#
+#    reranking: true
+#    reranker:
+#      model_name: cross-encoder/ms-marco-TinyBERT-L-2-v2
+#      predict:
+#        batch_size: 32
+#        show_progress_bar: true
+#
+#    evaluation:
+#      top_ks:
+#        - 3
+#        - 5
+#        - 7
+#        - 10
+#
+#- mlflow:
+#    experiment_name: Retrieval
+#    run_name: BAAI/bge-m3
+#    description: Retrieval with SentenceSplitter chunking and Reranking
+#    tags:
+#      experiment: Retrieval
+#      dataset: HotPotQA
+#      model: BAAI/bge-m3
+#
+#  preprocess:
+#    dataset: HotPotQA
+#    n_contexts:
+#    concat_train_validation: true
+#
+#  retrieval:
+#    chunker:
+#      name: SentenceSplitter
+#      params:
+#        chunk_size: 128
+#        chunk_overlap: 16
+#
+#    model:
+#      model_name: BAAI/bge-m3
+#      embed_batch_size: 8
+#      normalize: true
+#
+#    reranking: true
+#    reranker:
+#      model_name: cross-encoder/ms-marco-TinyBERT-L-2-v2
+#      predict:
+#        batch_size: 32
+#        show_progress_bar: true
+#
+#    evaluation:
+#      top_ks:
+#        - 3
+#        - 5
+#        - 7
+#        - 10
+#
 ## ----------------------------- ColBERT ---------------------------------------
 #
 #- mlflow:
