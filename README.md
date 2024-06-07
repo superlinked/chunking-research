@@ -184,9 +184,3 @@ Faiss-CPU should be also removed and Faiss-GPU to be **installed with conda**, a
 or without saving the results to MLflow
 
 `python retrieval.py`
-
-## Share / load pre-computed artifacts
-
-Download the experiment results - "experiments/" from
-[this Google Drive link](https://drive.google.com/drive/folders/1LvgXt8sriRBEwrgOZvcyIyJUKjPMz51Q?ths=true),
-and place them under the "./artifacts/" folder, then run the mlflow server with the command above.
